@@ -79,7 +79,52 @@ Api.prototype.updateUser = function updateUser(req, res) {
 };
 
 Api.prototype.getUserTags = function getUserTags(req, res) {
-  error(res, 501, "not implemented");
+  var limit = req.query.limit || 100;
+  var offset = req.query.offset || 0;
+
+  var compileTag = function(tag) {
+    return {
+      tagid: tag.id,
+      name: tag.get('name'),
+      counts: {
+        positive: tag.get('positiveCount'),
+        negative: tag.get('negativeCount')
+      },
+      type: '', // TODO: missing in query
+      ref: buildLink(req, '/tags/' + tag.id)
+    }
+  }
+
+  if (isValidRequest(req)) {
+    Parse.User.become(req.query.oauth_token).then(function(user) {
+      var reply = {
+        userid: user.id,
+        page: {
+          limit: limit,
+          offset: offset
+        }
+      };
+
+      var UserTag = Parse.Object.extend('UserTag');
+      var query = new Parse.Query(UserTag);
+      query.equalTo('user', user);
+      query.descending('createdAt');
+      setLimit(reply, query, limit);
+      setOffset(reply, query, offset);
+      setNext(req, reply, '/users/me/tags/', limit, offset);
+
+      query.find().then(function(tags) {
+        reply.tags = tags.map(compileTag);
+        ok(res, 200, 'OK', reply);
+      }, function(err) {
+        error(res, 500, err.message);
+      });
+    }, function(err) {
+      invalidSession(res, err);
+    });
+  } else {
+    missingToken(res);
+  }
 };
 
 Api.prototype.getUserArticles = function getUserArticles(req, res) {
@@ -104,10 +149,10 @@ Api.prototype.getUserArticles = function getUserArticles(req, res) {
 
   var compileArticle = function(page) {
     return {
-      articleid: page.id,
+      articleid: page.id, // TODO: not sure this is correct
       title: page.get('title'),
       url: page.get('url'),
-      ref: "", 
+      ref: buildLink(req, '/articles/' + page.id), 
       tagsInArticle: compileTags(page)
     };
   };
@@ -116,6 +161,10 @@ Api.prototype.getUserArticles = function getUserArticles(req, res) {
     Parse.User.become(req.query.oauth_token).then(function(user) {
       var userArticlesResponse = {
         userid: user.id,
+        page: {
+          limit: limit,
+          offset: offset
+        }
       }
       
       var Page = Parse.Object.extend('Page');
@@ -125,23 +174,9 @@ Api.prototype.getUserArticles = function getUserArticles(req, res) {
       query.include('positive_tags');
       query.descending('createdAt');
       
-      // set limit
-      if (limit > 0 && limit <= 1000) {
-        query.limit(limit);
-        userArticlesResponse.limit = limit
-      } else {
-        userArticlesResponse.limit = 100; // Parse default
-      }
-
-      // set offset
-      query.skip(offset);
-      userArticlesResponse.offset = offset;
-
-      userArticlesResponse.next = buildLink(req, 
-        '/users/me/articles', {
-          limit: userArticlesResponse.limit,
-          offset: offset + userArticlesResponse.limit
-        });
+      setLimit(userArticlesResponse, query, limit);
+      setOffset(userArticlesResponse, query, offset);
+      setNext(req, userArticlesResponse, '/users/me/articles/', limit, offset);
       
       // execute query
       query.find().then(function(pages) {
@@ -172,6 +207,27 @@ var error = function error(res, status, text) {
   res.json(status, {
     statusCode: status,
     statusText: text
+  });
+};
+
+var setLimit = function setLimit(reply, query, limit) {
+  if (limit > 0 && limit <= 1000) {
+    query.limit(limit);
+    reply.page.limit = limit
+  } else {
+    reply.page.limit = 100; // Parse default
+  }
+};
+
+var setOffset = function setOffset(reply, query, offset) {
+  query.skip(offset);
+  reply.page.offset = offset;
+};
+
+var setNext = function setNext(req, reply, target, limit, offset) {
+  reply.page.next = buildLink(req, target, {
+    limit: limit,
+    offset: offset + limit
   });
 };
 
