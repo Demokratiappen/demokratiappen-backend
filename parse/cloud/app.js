@@ -52,6 +52,8 @@ app.post('/users/me', function(req, res) { api.updateUser(req, res) });
 app.get('/users/:userid', function(req, res) { api.getUser(req, res) });
 app.get('/users/:userid/tags', function(req, res) { api.getUserTags(req, res) });
 app.get('/users/:userid/articles', function(req, res) { api.getUserArticles(req, res) });
+app.get('/tags', function(req, res) { api.getTags(req, res) });
+app.get('/articles', function(req, res) { api.getArticles(req, res) });
 
 // Attach the Express app to Cloud Code.
 app.listen();

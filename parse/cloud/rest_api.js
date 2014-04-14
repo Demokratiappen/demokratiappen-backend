@@ -22,7 +22,25 @@ var Api = function Api() {
 
 // API
 Api.prototype.root = function root(req, res) {
-  ok(res, 200, "OK", { message: 'badass api!'});
+  var reply = {
+    tags: buildLink(req, '/tags'),
+    articles: buildLink(req, '/articles'),
+    apiDocumentation: 'https://github.com/Demokratiappen/demokratiappen-backend/wiki/REST-API'
+  };
+
+  if (isValidRequest(req)) {
+    Parse.User.become(req.query.oauth_token).then(function(user) {
+      reply.user = {
+        tags: buildLink(req, '/users/' + user.id + '/tags'),
+        articles: buildLink(req, '/users/' + user.id + '/articles')
+      };
+      ok(res, 200, "OK", reply);
+    }, function(err) {
+      ok(res, 200, 'OK', reply);
+    });
+  } else {
+    ok(res, 200, 'OK', reply);
+  }
 };
 
 Api.prototype.accessToken = function accessToken(req, res) {
@@ -194,6 +212,14 @@ Api.prototype.getUserArticles = function getUserArticles(req, res) {
   }
 };
 
+Api.prototype.getTags = function getTags(req, res) {
+  error(res, 501, 'Not implemented');
+};
+
+Api.prototype.getArticles = function getArticles(req, res) {
+  error(res, 501, 'Not implemented');
+};
+
 // Helpers
 var ok = function ok(res, status, text, data) {
   res.json(status, {
@@ -259,8 +285,12 @@ var buildLink = function buildLink(req, path, params) {
     }).join('');
   }
 
-  return req.protocol + '://' + req.host + path + 
-    '?oauth_token=' + req.query.oauth_token + extraParams;
+  if (req.query.oauth_token) {
+    return req.protocol + '://' + req.host + path + 
+      '?oauth_token=' + req.query.oauth_token + extraParams;
+  } else {
+    return req.protocol + '://' + req.host + path;
+  }
 };
 
 var buildUserObject = function buildUserObject(req, user) {
