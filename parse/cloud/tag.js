@@ -19,6 +19,7 @@
 var Saplo = require('cloud/saplo');
 var saploKeys = require('cloud/saplo_parameters').saploKeys;
 var tagBooster = require('cloud/tagbooster');
+var preprocess = require('cloud/preprocess');
 
 var collection = new Saplo.Collection({'collection_id': saploKeys.DemokratiArtiklar});
 
@@ -154,6 +155,9 @@ function extractTags(request, response) {
   var textBody = requestJSON.text;
   var textUrl = requestJSON.url;
   var textHeadline = requestJSON.title;
+
+  // Replace party symbos with party names (S) -> (Socialdemokraterna)
+  text = preprocess.expandParties(test);
 
   function dLog(str) {
     // Enable next line to turn on debug logging
