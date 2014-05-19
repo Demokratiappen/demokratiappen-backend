@@ -20,59 +20,75 @@ var assert = require("assert")
 
 var preprocess = require('../parse/cloud/preprocess');
 
-// Grundläggande funktionalitet
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace party signature with party name', function(){
-      // Lite oklart, men unit.js verkar vilja ha actual först, och expected sist
-      assert.equal(preprocess.expandParties('Lite text med (FP) etc'), 
-                                            'Lite text med (Folkpartiet) etc');
-    })
-  })
-})
+// -----------------------------------------------------------------------
+// Tests for expandParties
+// -----------------------------------------------------------------------
+function check_expandParties(expected, sut){
+  // Lite oklart, men unit.js verkar vilja ha actual först, och expected sist.
+  assert.equal(preprocess.expandParties(sut), expected);
+}
 
+// Grundläggande funktionalitet
+describe('Preprocess.expandParties()', function(){ // Man kan ha describe i flera nivåer, men vi nöjer oss med en.
+  it('should replace party signature with party name', function(){
+    check_expandParties('Lite text med (Folkpartiet) etc.', 
+                        'Lite text med (FP) etc.');
+  })
+});
 // Grundläggande funktionalitet, inte skilja på stora och små bokstäver.
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace party signature with party name (case insensitive', function(){
-      assert.equal(preprocess.expandParties('Lite text med (fp) etc'), 
-                                           'Lite text med (Folkpartiet) etc');
-    })
+describe('Preprocess.expandParties()', function(){
+  it('should replace party signature with party name (case insensitive', function(){
+    check_expandParties('Lite text med (Folkpartiet) etc.', 
+                        'Lite text med (fp) etc.');
   })
-})
+});
 // Parti med konstig beteckning
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace (odd) party signature with party name', function(){
-      assert.equal(preprocess.expandParties('Lite text med (F!) etc'), 
-                                            'Lite text med (Feministiskt initiativ) etc');
-    })
+describe('Preprocess.expandParties()', function(){
+  it('should replace (odd) party signature with party name', function(){
+    check_expandParties('Lite text med (Feministiskt initiativ) etc.', 
+                        'Lite text med (F!) etc.');
   })
-})
+});
+// Parti med konstig beteckning (utf-8)
+describe('Preprocess.expandParties()', function(){
+  it('should replace last party signature in list with party name', function(){
+    check_expandParties('Lite text med (Vägvalet) etc.', 
+                        'Lite text med (VägV) etc.');
+  })
+});
+// Parti med konstig beteckning (&)
+describe('Preprocess.expandParties()', function(){
+  it('should replace last party signature in list with party name', function(){
+    check_expandParties('Lite text med (Gruppen Progressiva förbundet av Socialdemokrater i Europaparlamentet) etc.', 
+                        'Lite text med (S&D) etc.');
+  })
+});
 // Första partiet [Intern kunskap om listan i funktionen]
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace first party signature in list with party name', function(){
-      assert.equal(preprocess.expandParties('Lite text med (S) etc'), 
-                                            'Lite text med (Socialdemokraterna) etc');
-    })
+describe('Preprocess.expandParties()', function(){
+  it('should replace first party signature in list with party name', function(){
+    check_expandParties('Lite text med (Socialdemokraterna) etc.', 
+                        'Lite text med (S) etc.');
   })
-})
-// Sista partiet [Intern kunskap om listan i funktionen]
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace last party signature in list with party name', function(){
-      assert.equal(preprocess.expandParties('Lite text med (VägV) etc'), 
-                                            'Lite text med (Vägvalet) etc');
-    })
+});
+// Sista partiet [Intern kunskap om listan i funktionen] (dessutom med '/' i beteckningen)
+describe('Preprocess.expandParties()', function(){
+  it('should replace last party signature in list with party name', function(){
+    check_expandParties('Lite text med (Europeiska enade vänstern/Nordisk grön vänster) etc.', 
+                        'Lite text med (GUE/NGL) etc.');
   })
-})
+});
 // Flera partier flera gånger
-describe('Preprocess', function(){
-  describe('expandParties()', function(){
-    it('should replace several party signature with party names', function(){
-      assert.equal(preprocess.expandParties('Lite text med (MP), (C) och (PP), sen tillkommer (C)'), 
-                                            'Lite text med (Miljöpartiet), (Centerpartiet) och (Piratpartiet), sen tillkommer (Centerpartiet)');
-    })
+describe('Preprocess.expandParties()', function(){
+  it('should replace several party signatures with party names', function(){
+    check_expandParties('Lite text med (Miljöpartiet), (Centerpartiet) och (Piratpartiet), sen tillkommer (Centerpartiet)', 
+                        'Lite text med (MP), (C) och (PP), sen tillkommer (C)');
   })
-})
+});
+// EU-parlamentet med '/' i förkortningen
+describe('Preprocess.expandParties()', function(){
+  it('should replace several party signatures with party names', function(){
+    check_expandParties('Lite text med (Europeiska enade vänstern/Nordisk grön vänster), och (Europeiska enade vänstern/Nordisk grön vänster) igen', 
+                        'Lite text med (GUE/NGL), och (GUE/NGL) igen');
+  })
+});
+// -----------------------------------------------------------------------
